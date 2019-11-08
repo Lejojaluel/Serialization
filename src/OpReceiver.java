@@ -4,36 +4,49 @@ import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 
+/**
+ * This class receives a serialized BinaryOp and deserialize, performs calculations, and serializes the data and sends
+ * back to the sender.
+ *
+ * @Author Leroy Valencia
+ */
 public class OpReceiver {
   private static InetAddress clientAddr = null;
-  private static String returnHost = "";
-  private static int returnPort = 0;
   private static boolean verbose = true;
 
+  /**
+   * This method sets up the ServerSocket with a given port to listen on.
+   * @param port the port to listen on.
+   * @return the ServerSocket when its created.
+   */
   private static ServerSocket setupServer(int port) {
-    ServerSocket serverSocket = null;
+    ServerSocket serverSocket = null; //Sets to null
 
-    try {
+    try { // Try catch for IOexception when creating ServerSocket
       serverSocket = new ServerSocket(port);
     } catch (IOException e) {
-      e.printStackTrace();
+      System.err.println("[ERROR] In setupServer. IOException cannot connect on port " + port);
+      System.exit(1);
     }
     return serverSocket;
   }
 
+  /**
+   * Gets the next client in line to connect to.
+   * @param server The serversocket that is created on the port.
+   * @return a Socket that is connected to the client.
+   */
   private static Socket getNextClient(ServerSocket server) {
-    Socket client = null;
-    try {
-      client = server.accept();
+    Socket client = null; // Sets to null
+    try { // Try catch for Socket creation
+      client = server.accept(); //Accept the incoming request.
     } catch (IOException e) {
-      e.printStackTrace();
+      System.err.println("[ERROR] Cannot accept the client in getNextClient()");
+      System.exit(1);
     }
 
-    clientAddr = client.getInetAddress();
-    returnHost = clientAddr.getHostAddress();
-    returnPort = client.getPort();
+    clientAddr = client.getInetAddress(); // Allows for information to be fetched from client
     System.out.println(
         "Incoming connection from "
             + clientAddr.getHostName()
@@ -41,64 +54,61 @@ public class OpReceiver {
             + clientAddr.getHostAddress()
             + ":"
             + client.getPort());
-    return client;
+    return client; // Returns the client when connected.
   }
 
-  private static Socket Connect(String host, int port) {
-    Socket server = null;
-    try {
-      server = new Socket(host, port);
-    } catch (UnknownHostException e) {
-      // TODO Change error messages
-      e.printStackTrace();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    return server;
-  }
-
-  private static void send(BinaryOp data, String host, int port) {
-    Socket server = Connect(host, port);
-    ObjectOutputStream serverObj = null;
-    try {
+  /**
+   * This method will send over the BinaryOp data back to the client using serializtion.
+   * @param data The data being sent over, A BinaryOP
+   * @param server the Socket in which to communicate with
+   */
+  private static void send(BinaryOp data,Socket server) {
+    System.out.println("Sending "+data.toString()); //print what is sending
+    ObjectOutputStream serverObj = null; //Create to null
+    try { //These are necessary tries but need to be seperate to avoid pokemon exception handling.
       verbose("initiating object output stream...");
       serverObj = new ObjectOutputStream(server.getOutputStream());
     } catch (IOException e) {
-      // TODO change error message
-      e.printStackTrace();
+      System.err.println("[ERROR] In creating the objectOutPutStream");
+      System.exit(1);
     }
 
     try {
       verbose("writing object");
       serverObj.writeObject(data);
     } catch (IOException e) {
-      // TODO change error message
-      e.printStackTrace();
+      System.err.println("[ERROR] In writing the Object to client");
+      System.exit(1);
     }
 
     try {
       verbose("flushing stream");
       serverObj.flush();
     } catch (IOException e) {
-      // TODO change error message
-      e.printStackTrace();
+      System.err.println("[ERROR] In flushing the stream out to the client");
+      System.exit(1);
     }
-
-    System.out.println("Sent to server...");
-    data.toString();
+    System.out.println("Sent to server..."); //End of sending
   }
 
-  public static double calculate(double left, double right, Op operator) {
+  /**
+   * This method will calculate the given equation based on the given binary operation
+   * @param data the BinaryOp to use
+   * @return the result in a double form
+   */
+  public static double calculate(BinaryOp data) {
     System.out.println("Calculating...");
-    switch (operator) {
+    double left = data.getLeft(); //set the left to the binaryop left
+    double right = data.getRight(); // set the right to the binaryop right
+    switch (data.getOperator()) { // Switch case to perform calculations
       case ADD:
-        return left + right;
+        return left + right; //Addition
       case SUBTRACT:
-        return left - right;
+        return left - right; //Subtraction
       case DIVIDE:
-        return right != 0 ? left / right : 0;
+        return right != 0 ? left / right : 0; //Division catches the 0 if not caught before
       case MULTIPLY:
-        return left * right;
+        return left * right; //Multiplication
       default:
         System.err.println("IMPOSSIBLE IN SWITCH CASE ");
         System.exit(1);
@@ -107,52 +117,59 @@ public class OpReceiver {
     return 0;
   }
 
+  /**
+   * The main method because it needs to always be waiting for input.
+   * @param args
+   */
   public static void main(String[] args) {
-    final int port = 4096;
-    ServerSocket server = null;
+    final int port = 4096; // only listen on this port
+    ServerSocket server = setupServer(port); // setup server for use
+    //Set to null outside the while loop
     Socket client = null;
     BinaryOp data = null;
     ObjectInputStream in = null;
 
-    server = setupServer(port);
+    System.out.println("\nSetting up listener on port " + port + "...");
 
-    System.out.println("Setting up listener on port " + port + "...");
-    while (true) {
-      client = getNextClient(server);
+    while (true) { //While true because it always needs to respond.
+      client = getNextClient(server); //Get the next client in line
 
-      try {
+      try { //These are all in seperate trys to prevent pokemon exception handling
         in = new ObjectInputStream(client.getInputStream());
       } catch (IOException e) {
-        e.printStackTrace();
+        System.err.println("[ERROR] in Getting the new ObjectInputStream");
+        System.exit(1);
       }
-
-      System.out.println("Obtained input stream!");
+      verbose("Obtained input stream!");
 
       try {
-        data = (BinaryOp) in.readObject();
+        data = (BinaryOp) in.readObject(); //Read the object from client and cast to BinaryOp
+        System.out.println("Recieved object is: "+ data.toString());
       } catch (IOException ioe) {
         ioe.printStackTrace();
       } catch (ClassNotFoundException cnfe) {
         cnfe.printStackTrace();
       }
-      System.out.println("Object Received!");
+      verbose("Object Received!");
+      //Perform Calculation
+      data.setResult(calculate(data));
+      //Send data back to client
+      send(data,client);
 
-      // TODO perform calculation
-      data.setResult(calculate(data.getLeft(), data.getRight(), data.getOperator()));
-      // System.out.println(data.toStrings());
-      // TODO set result and send back
-      send(data, returnHost, 4444);
-      // System.out.println(data.toString());
-
+      //Close the connection once finished.
       try {
         client.close();
         System.out.println("Connection Closed");
       } catch (IOException e) {
         e.printStackTrace();
       }
-    } // end of while true
+    }
   }
 
+  /**
+   * This just allows for more information to be outputted or not
+   * @param s The string to print.
+   */
   private static void verbose(String s) {
     if (verbose) {
       System.out.println(s);

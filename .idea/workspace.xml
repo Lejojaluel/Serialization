@@ -50,10 +50,15 @@
     <configuration name="OpSender" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="OpSender" />
       <module name="Serialization" />
+      <option name="PROGRAM_PARAMETERS" value="127.0.0.1 4096111 1 + 1" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <list>
+      <item itemvalue="Application.OpReceiver" />
+      <item itemvalue="Application.OpSender" />
+    </list>
     <recent_temporary>
       <list>
         <item itemvalue="Application.OpSender" />
@@ -79,7 +84,9 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
           </value>
         </entry>
       </map>
